@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'forget_pass_screen.dart';
-import 'register_form_screen.dart';
+import '../screen/forget_pass_pagedart';
+import 'register_form_page.dart';
 // import 'package:project_kuliah_mwsp_uts_kel4/dummy/main_page_dummy.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/main_page.dart';
 

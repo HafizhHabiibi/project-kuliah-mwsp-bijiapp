@@ -11,7 +11,7 @@ import 'package:project_kuliah_mwsp_uts_kel4/pages/wishlist_screen.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/setting_page.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/elements_page.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/store_locations_page.dart'; // ✅ Tambahkan ini
-import 'package:project_kuliah_mwsp_uts_kel4/screen/welcome_screen.dart';
+import 'package:project_kuliah_mwsp_uts_kel4/pages/welcome_page.dart';
 
 class SideBar extends StatelessWidget {
   const SideBar({super.key});

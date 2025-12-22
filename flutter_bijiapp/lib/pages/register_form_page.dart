@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
-import 'login_form_screen.dart';
+import 'package:project_kuliah_mwsp_uts_kel4/pages/login_form_page.dart';
 
-class ForgetPassScreen extends StatefulWidget {
-  const ForgetPassScreen({super.key});
+class RegisterFormScreen extends StatefulWidget {
+  const RegisterFormScreen({super.key});
 
   @override
-  State<ForgetPassScreen> createState() => _ForgetPassScreenState();
+  State<RegisterFormScreen> createState() => _RegisterFormScreenState();
 }
 
-class _ForgetPassScreenState extends State<ForgetPassScreen>
+class _RegisterFormScreenState extends State<RegisterFormScreen>
     with SingleTickerProviderStateMixin {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+
   bool _obscurePassword = true;
 
   late AnimationController _controller;
@@ -33,6 +36,8 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
   @override
   void dispose() {
     _controller.dispose();
+    _usernameController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -49,10 +54,13 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
       backgroundColor: Colors.black.withOpacity(0.3),
       body: Stack(
         children: [
+          // Background gelap transparan — klik di luar popup untuk menutup
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(color: const Color.fromRGBO(74, 55, 73, 1)),
           ),
+
+          // Popup Form Register
           Align(
             alignment: Alignment.bottomCenter,
             child: SlideTransition(
@@ -68,10 +76,11 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      const Align(
+                      // Judul
+                      Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Forget Password",
+                        child: const Text(
+                          "Sign Up",
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
@@ -82,12 +91,58 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
                       const SizedBox(height: 8),
                       const Text(
                         "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor",
-                        style: TextStyle(color: Colors.black87),
+                        textAlign: TextAlign.left,
+                        style: TextStyle(fontSize: 14, color: Colors.black87),
                       ),
                       const SizedBox(height: 24),
-                      const Align(
+
+                      // Username
+                      Align(
                         alignment: Alignment.centerLeft,
-                        child: Text(
+                        child: const Text(
+                          'Username',
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _usernameController,
+                        decoration: InputDecoration(
+                          hintText: 'Roberto Karlos',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Email
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: const Text(
+                          'Email',
+                          style: TextStyle(fontSize: 14, color: Colors.black54),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          hintText: 'Email Address',
+                          hintStyle: TextStyle(
+                            color: Color.fromRGBO(74, 55, 73, 0.5),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(22),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Password
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: const Text(
                           'Password',
                           style: TextStyle(fontSize: 14, color: Colors.black54),
                         ),
@@ -98,7 +153,9 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           hintText: 'Password',
-                          hintStyle: TextStyle(color: Color.fromRGBO(74, 55, 73, 0.5)),
+                          hintStyle: TextStyle(
+                            color: Color.fromRGBO(74, 55, 73, 0.5),
+                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
@@ -114,6 +171,8 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
                         ),
                       ),
                       const SizedBox(height: 24),
+
+                      // Tombol REGISTER
                       ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
@@ -126,7 +185,7 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
                           ),
                         ),
                         child: const Text(
-                          "SUBMIT",
+                          "REGISTER",
                           style: TextStyle(
                             fontSize: 16,
                             letterSpacing: 1.5,
@@ -136,42 +195,42 @@ class _ForgetPassScreenState extends State<ForgetPassScreen>
                       ),
                       const SizedBox(height: 20),
 
-                      // Teks informasi dan navigasi
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Sign in to your registered account",
-                          textAlign: TextAlign.justify,
-                          style: TextStyle(color: Colors.black87),
-                        ),
+                      // Sudah punya akun?
+                      const Text(
+                        "Already have an account?",
+                        style: TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 6),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const LoginScreen(),
-                              ),
+
+                      // Tombol Sign In
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(context);
+                          Future.delayed(const Duration(milliseconds: 300), () {
+                            showModalBottomSheet(
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              isScrollControlled: true,
+                              useSafeArea: true,
+                              enableDrag: true,
+                              builder: (context) => const LoginScreen(),
                             );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.zero,
-                            minimumSize: const Size(0, 0),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          });
+                        },
+                        style: ElevatedButton.styleFrom(
+                          minimumSize: const Size(double.infinity, 50),
+                          backgroundColor: Color.fromRGBO(229, 229, 229, 1),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(22),
                           ),
-                          child: const Text(
-                            "Login here",
-                            style: TextStyle(
-                              color: Color.fromRGBO(74, 55, 73, 1),
-                              fontWeight: FontWeight.w500,
-                            ),
+                        ),
+                        child: const Text(
+                          "SIGN IN",
+                          style: TextStyle(
+                            color: Color.fromRGBO(100, 100, 100, 1),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 10),
                     ],
                   ),
                 ),

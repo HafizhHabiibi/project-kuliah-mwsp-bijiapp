@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/screen/welcome_screen.dart';
+import 'package:project_kuliah_mwsp_uts_kel4/pages/welcome_page.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});

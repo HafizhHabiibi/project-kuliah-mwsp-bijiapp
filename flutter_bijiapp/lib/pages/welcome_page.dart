@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/screen/login_form_screen.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/screen/register_form_screen.dart';
+import 'package:project_kuliah_mwsp_uts_kel4/pages/login_form_page.dart';
+import 'package:project_kuliah_mwsp_uts_kel4/pages/register_form_page.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 

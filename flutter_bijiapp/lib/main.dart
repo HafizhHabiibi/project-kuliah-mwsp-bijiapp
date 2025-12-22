@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/screen/getstarted_screen.dart';
+import 'package:project_kuliah_mwsp_uts_kel4/pages/getstarted_page.dart';
 
 void main() {
   runApp(const BijiApp());
@@ -16,5 +16,5 @@ class BijiApp extends StatelessWidget {
       theme: ThemeData(fontFamily: 'Poppins'),
       home: const OnboardingScreen(),
     );
-  } 
+  }
 }
