@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../screen/forget_pass_pagedart';
+import '../services/auth_service.dart';
+import '../pages/forget_pass_page.dart';
 import 'register_form_page.dart';
-// import 'package:project_kuliah_mwsp_uts_kel4/dummy/main_page_dummy.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/main_page.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -16,7 +16,10 @@ class _LoginScreenState extends State<LoginScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
+  final AuthService _authService = AuthService();
+
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
@@ -44,9 +47,40 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   void _togglePassword() {
-    setState(() {
-      _obscurePassword = !_obscurePassword;
-    });
+    setState(() => _obscurePassword = !_obscurePassword);
+  }
+
+  // ================= LOGIN HANDLER =================
+  Future<void> _handleLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email dan password wajib diisi')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await _authService.login(email: email, password: password);
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const MainPage()),
+        (route) => false,
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['message'])));
+    }
   }
 
   @override
@@ -59,6 +93,7 @@ class _LoginScreenState extends State<LoginScreen>
             onTap: () => Navigator.pop(context),
             child: Container(color: const Color.fromRGBO(74, 55, 73, 1)),
           ),
+
           Align(
             alignment: Alignment.bottomCenter,
             child: SlideTransition(
@@ -81,32 +116,14 @@ class _LoginScreenState extends State<LoginScreen>
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromRGBO(34, 34, 34, 1),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
-                      ),
                       const SizedBox(height: 24),
 
-                      // Username
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Username',
-                          style: TextStyle(fontSize: 14, color: Colors.black54),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
+                      // EMAIL
                       TextField(
-                        controller: _emailController
-                          ..text = _emailController.text.isEmpty
-                              ? 'info@example.com'
-                              : _emailController.text,
+                        controller: _emailController,
                         decoration: InputDecoration(
                           hintText: 'Email Address',
                           border: OutlineInputBorder(
@@ -116,29 +133,17 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       const SizedBox(height: 16),
 
-                      // Password
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Password',
-                          style: TextStyle(fontSize: 14, color: Colors.black54),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
+                      // PASSWORD
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           hintText: 'Password',
-                          hintStyle: const TextStyle(
-                            color: Color.fromRGBO(74, 55, 73, 0.5),
-                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: const Color.fromRGBO(74, 55, 73, 1),
                             ),
                             onPressed: _togglePassword,
                           ),
@@ -149,16 +154,9 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // Tombol LOGIN menuju MainPageDummy
+                      // LOGIN BUTTON
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MainPage(),
-                            ),
-                          );
-                        },
+                        onPressed: _isLoading ? null : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 50),
                           backgroundColor: const Color.fromRGBO(74, 55, 73, 1),
@@ -166,79 +164,43 @@ class _LoginScreenState extends State<LoginScreen>
                             borderRadius: BorderRadius.circular(22),
                           ),
                         ),
-                        child: const Text(
-                          "LOGIN",
-                          style: TextStyle(
-                            fontSize: 16,
-                            letterSpacing: 1.5,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text(
+                                "LOGIN",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  letterSpacing: 1.5,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
 
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
+
+                      // FORGOT PASSWORD
                       Align(
                         alignment: Alignment.centerLeft,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            TextButton(
-                              onPressed: () {},
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: const Size(0, 0),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        child: TextButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgetPassScreen(),
                               ),
-                              child: const Text(
-                                "Forgot Password?",
-                                style: TextStyle(
-                                  color: Color.fromRGBO(74, 55, 73, 1),
-                                ),
-                              ),
+                            );
+                          },
+                          child: const Text(
+                            "Forgot Password?",
+                            style: TextStyle(
+                              color: Color.fromRGBO(74, 55, 73, 1),
                             ),
-                            const SizedBox(width: 5),
-                            TextButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        const ForgetPassScreen(),
-                                  ),
-                                );
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                minimumSize: const Size(0, 0),
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: const Text(
-                                "Reset Password",
-                                style: TextStyle(
-                                  color: Color.fromRGBO(74, 55, 73, 0.5),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 30),
 
-                      // Sosial media login
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/images/social/google-mail.png',
-                            height: 40,
-                          ),
-                          const SizedBox(width: 20),
-                          Image.asset(
-                            'assets/images/social/facebook.png',
-                            height: 40,
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 30),
 
                       const Text(
@@ -252,7 +214,7 @@ class _LoginScreenState extends State<LoginScreen>
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const RegisterFormScreen(),
+                              builder: (_) => const RegisterFormScreen(),
                             ),
                           );
                         },
