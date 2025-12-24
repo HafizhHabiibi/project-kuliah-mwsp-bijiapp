@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/pages/login_form_page.dart';
+import '../services/auth_service.dart';
+import 'login_form_page.dart';
+import 'main_page.dart';
 
 class RegisterFormScreen extends StatefulWidget {
   const RegisterFormScreen({super.key});
@@ -15,6 +17,7 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
   final TextEditingController _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   late AnimationController _controller;
   late Animation<Offset> _offsetAnimation;
@@ -43,9 +46,45 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
   }
 
   void _togglePassword() {
-    setState(() {
-      _obscurePassword = !_obscurePassword;
-    });
+    setState(() => _obscurePassword = !_obscurePassword);
+  }
+
+  Future<void> _handleRegister() async {
+    final name = _usernameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (name.length < 4 || !email.contains('@') || password.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill all fields correctly')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final result = await AuthService().register(
+      name: name,
+      email: email,
+      password: password,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (!mounted) return;
+
+    if (result['success']) {
+      Navigator.pop(context); // tutup modal register
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const MainPage()),
+      );
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result['message'])));
+    }
   }
 
   @override
@@ -54,13 +93,11 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
       backgroundColor: Colors.black.withOpacity(0.3),
       body: Stack(
         children: [
-          // Background gelap transparan — klik di luar popup untuk menutup
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: Container(color: const Color.fromRGBO(74, 55, 73, 1)),
           ),
 
-          // Popup Form Register
           Align(
             alignment: Alignment.bottomCenter,
             child: SlideTransition(
@@ -76,35 +113,19 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      // Judul
-                      Align(
+                      const Align(
                         alignment: Alignment.centerLeft,
-                        child: const Text(
+                        child: Text(
                           "Sign Up",
                           style: TextStyle(
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
-                            color: Color.fromRGBO(34, 34, 34, 1),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor",
-                        textAlign: TextAlign.left,
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
                       ),
                       const SizedBox(height: 24),
 
                       // Username
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: const Text(
-                          'Username',
-                          style: TextStyle(fontSize: 14, color: Colors.black54),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       TextField(
                         controller: _usernameController,
                         decoration: InputDecoration(
@@ -117,21 +138,10 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
                       const SizedBox(height: 16),
 
                       // Email
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: const Text(
-                          'Email',
-                          style: TextStyle(fontSize: 14, color: Colors.black54),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       TextField(
                         controller: _emailController,
                         decoration: InputDecoration(
                           hintText: 'Email Address',
-                          hintStyle: TextStyle(
-                            color: Color.fromRGBO(74, 55, 73, 0.5),
-                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(22),
                           ),
@@ -140,28 +150,16 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
                       const SizedBox(height: 16),
 
                       // Password
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: const Text(
-                          'Password',
-                          style: TextStyle(fontSize: 14, color: Colors.black54),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
                       TextField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
                         decoration: InputDecoration(
                           hintText: 'Password',
-                          hintStyle: TextStyle(
-                            color: Color.fromRGBO(74, 55, 73, 0.5),
-                          ),
                           suffixIcon: IconButton(
                             icon: Icon(
                               _obscurePassword
                                   ? Icons.visibility_off_outlined
                                   : Icons.visibility_outlined,
-                              color: const Color.fromRGBO(74, 55, 73, 1),
                             ),
                             onPressed: _togglePassword,
                           ),
@@ -172,11 +170,9 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
                       ),
                       const SizedBox(height: 24),
 
-                      // Tombol REGISTER
+                      // REGISTER BUTTON
                       ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
+                        onPressed: _isLoading ? null : _handleRegister,
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 50),
                           backgroundColor: const Color.fromRGBO(74, 55, 73, 1),
@@ -184,25 +180,29 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
                             borderRadius: BorderRadius.circular(22),
                           ),
                         ),
-                        child: const Text(
-                          "REGISTER",
-                          style: TextStyle(
-                            fontSize: 16,
-                            letterSpacing: 1.5,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: _isLoading
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                              )
+                            : const Text(
+                                "REGISTER",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  letterSpacing: 1.5,
+                                  color: Colors.white,
+                                ),
+                              ),
                       ),
+
                       const SizedBox(height: 20),
 
-                      // Sudah punya akun?
                       const Text(
                         "Already have an account?",
                         style: TextStyle(color: Colors.grey),
                       ),
+
                       const SizedBox(height: 6),
 
-                      // Tombol Sign In
                       ElevatedButton(
                         onPressed: () {
                           Navigator.pop(context);
@@ -211,25 +211,20 @@ class _RegisterFormScreenState extends State<RegisterFormScreen>
                               context: context,
                               backgroundColor: Colors.transparent,
                               isScrollControlled: true,
-                              useSafeArea: true,
-                              enableDrag: true,
-                              builder: (context) => const LoginScreen(),
+                              builder: (_) => const LoginScreen(),
                             );
                           });
                         },
                         style: ElevatedButton.styleFrom(
                           minimumSize: const Size(double.infinity, 50),
-                          backgroundColor: Color.fromRGBO(229, 229, 229, 1),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(22),
+                          backgroundColor: const Color.fromRGBO(
+                            229,
+                            229,
+                            229,
+                            1,
                           ),
                         ),
-                        child: const Text(
-                          "SIGN IN",
-                          style: TextStyle(
-                            color: Color.fromRGBO(100, 100, 100, 1),
-                          ),
-                        ),
+                        child: const Text("SIGN IN"),
                       ),
                     ],
                   ),
