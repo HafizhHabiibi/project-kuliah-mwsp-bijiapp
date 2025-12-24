@@ -30,10 +30,19 @@ class AuthenticationController extends Controller
                 'password' => Hash::make($validated['password']),
             ]);
 
+            $token = $user->createToken('authToken')->plainTextToken;
+
             return response()->json([
                 'response_code' => 201,
                 'status'        => 'success',
                 'message'       => 'Successfully registered',
+                'user_info'     => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ],
+                'token' => $token,
+                'token__type' => 'Bearer',
             ], 201);
         } catch (ValidationException $e) {
             return response()->json([
