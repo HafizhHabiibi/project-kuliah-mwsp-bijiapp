@@ -22,14 +22,14 @@ class AuthService {
       final data = _apiService.parseResponse(response);
 
       if (response.statusCode == 201 && data['status'] == 'success') {
-        // 🔥 AUTO LOGIN SETELAH REGISTER
+        // setelah register → langsung login
         return await login(email: email, password: password);
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Registration failed',
-        };
       }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Registration failed',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -50,26 +50,23 @@ class AuthService {
       final data = _apiService.parseResponse(response);
 
       if (response.statusCode == 200 && data['status'] == 'success') {
+        // simpan token
         final token = data['token'];
         await _apiService.saveToken(token);
 
-        final user = UserModel.fromJson(data['user_info']);
+        // 🔥 PENTING: backend sekarang pakai key "user"
+        final user = UserModel.fromJson(data['user']);
 
-        return {
-          'success': true,
-          'message': data['message'] ?? 'Login successful',
-          'user': user,
-          'token': token,
-        };
-      } else {
-        return {'success': false, 'message': data['message'] ?? 'Login failed'};
+        return {'success': true, 'user': user, 'token': token};
       }
+
+      return {'success': false, 'message': data['message'] ?? 'Login failed'};
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
-  // ================= GET USER INFO =================
+  // ================= GET CURRENT USER =================
   Future<Map<String, dynamic>> getUserInfo() async {
     try {
       final response = await _apiService.get(
@@ -79,14 +76,17 @@ class AuthService {
 
       final data = _apiService.parseResponse(response);
 
-      if (response.statusCode == 200) {
-        return {'success': true, 'data': data};
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Failed to get user info',
-        };
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        // backend mengirim user login di key "data"
+        final user = UserModel.fromJson(data['data']);
+
+        return {'success': true, 'user': user};
       }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Failed to get user info',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
@@ -95,55 +95,50 @@ class AuthService {
   // ================= UPDATE PROFILE =================
   Future<Map<String, dynamic>> updateProfile({
     required String name,
-    required String email,
+    String? address,
+    String? profilePhotoUrl,
   }) async {
     try {
+      Map<String, dynamic> body = {'name': name};
+
+      if (address != null && address.isNotEmpty) {
+        body['address'] = address;
+      }
+
+      if (profilePhotoUrl != null && profilePhotoUrl.isNotEmpty) {
+        body['profile_photo_url'] = profilePhotoUrl;
+      }
+
       final response = await _apiService.put(
         AppConfig.updateProfile,
-        body: {'name': name, 'email': email},
+        body: body,
         needsAuth: true,
       );
 
       final data = _apiService.parseResponse(response);
 
-      if (response.statusCode == 200) {
-        return {'success': true};
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Update profile failed',
-        };
+      if (response.statusCode == 200 && data['status'] == 'success') {
+        final updatedUser = UserModel.fromJson(data['user']);
+
+        return {'success': true, 'user': updatedUser};
       }
+
+      return {
+        'success': false,
+        'message': data['message'] ?? 'Update profile failed',
+      };
     } catch (e) {
       return {'success': false, 'message': e.toString()};
     }
   }
 
   // ================= LOGOUT =================
-  Future<Map<String, dynamic>> logout() async {
+  Future<void> logout() async {
     try {
-      final response = await _apiService.post(
-        AppConfig.logout,
-        body: {},
-        needsAuth: true,
-      );
-
-      final data = _apiService.parseResponse(response);
-
-      if (response.statusCode == 200) {
-        await _apiService.removeToken();
-        return {
-          'success': true,
-          'message': data['message'] ?? 'Logout successful',
-        };
-      } else {
-        return {
-          'success': false,
-          'message': data['message'] ?? 'Logout failed',
-        };
-      }
-    } catch (e) {
-      return {'success': false, 'message': e.toString()};
+      await _apiService.post(AppConfig.logout, body: {}, needsAuth: true);
+    } finally {
+      // apapun hasilnya → hapus token
+      await _apiService.removeToken();
     }
   }
 
