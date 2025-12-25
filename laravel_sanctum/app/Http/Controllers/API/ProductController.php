@@ -10,19 +10,19 @@ class ProductController extends Controller
 {
     /**
      * GET /products
-     * List semua produk
+     * List semua produk dengan info user
      */
     public function index()
     {
         return response()->json([
             'status' => 'success',
-            'data' => Product::latest()->get()
+            'data' => Product::with('user:id,name,email')->latest()->get() // tambahkan info user
         ]);
     }
 
     /**
      * POST /products
-     * Tambah produk
+     * Tambah produk - OTOMATIS SIMPAN user_id
      */
     public function store(Request $request)
     {
@@ -34,6 +34,9 @@ class ProductController extends Controller
             'image_url'   => 'nullable|url',
         ]);
 
+        // SIMPAN user_id dari user yang login
+        $validated['user_id'] = auth()->id();
+
         $product = Product::create($validated);
 
         return response()->json([
@@ -44,11 +47,19 @@ class ProductController extends Controller
 
     /**
      * PUT /products/{id}
-     * Update produk
+     * Update produk - CEK OWNERSHIP
      */
     public function update(Request $request, $id)
     {
         $product = Product::findOrFail($id);
+
+        //  CEK APAKAH USER ADALAH PEMILIK
+        if ($product->user_id !== auth()->id()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Anda tidak memiliki akses untuk mengubah produk ini'
+            ], 403);
+        }
 
         $validated = $request->validate([
             'name'        => 'required|string',
@@ -68,11 +79,21 @@ class ProductController extends Controller
 
     /**
      * DELETE /products/{id}
-     * Hapus produk
+     * Hapus produk - CEK OWNERSHIP
      */
     public function destroy($id)
     {
-        Product::findOrFail($id)->delete();
+        $product = Product::findOrFail($id);
+
+        // CEK APAKAH USER ADALAH PEMILIK
+        if ($product->user_id !== auth()->id()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Anda tidak memiliki akses untuk menghapus produk ini'
+            ], 403);
+        }
+
+        $product->delete();
 
         return response()->json([
             'status'  => 'success',
