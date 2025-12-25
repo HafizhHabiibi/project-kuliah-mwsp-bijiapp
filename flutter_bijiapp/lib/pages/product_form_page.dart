@@ -59,7 +59,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
     if (_nameController.text.isEmpty ||
         _priceController.text.isEmpty ||
         _selectedCategory == null) {
-      _showMessage('Nama, kategori, dan harga wajib diisi');
+      _showMessage('Nama, kategori, dan harga wajib diisi', isError: true);
       return;
     }
 
@@ -90,30 +90,65 @@ class _ProductFormPageState extends State<ProductFormPage> {
         );
       }
 
+      // IMPROVED ERROR HANDLING
       if (response.statusCode == 200 || response.statusCode == 201) {
         _showMessage(
           isEdit ? 'Produk berhasil diupdate' : 'Produk berhasil ditambahkan',
+          isError: false,
         );
         Navigator.pop(context, true);
       } else if (response.statusCode == 401) {
-        _showMessage('Session habis, silakan login ulang');
+        _showMessage('Session habis, silakan login ulang', isError: true);
+      } else if (response.statusCode == 403) {
+        // HANDLE FORBIDDEN - User bukan pemilik produk
+        _showMessage(
+          'Anda tidak memiliki akses untuk ${isEdit ? "mengubah" : "menghapus"} produk ini',
+          isError: true,
+        );
+        // Kembali ke halaman sebelumnya karena user tidak punya akses
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) Navigator.pop(context);
+        });
+      } else if (response.statusCode == 404) {
+        //  HANDLE NOT FOUND
+        _showMessage('Produk tidak ditemukan', isError: true);
       } else {
-        _showMessage('Gagal menyimpan produk');
+        // HANDLE ERROR LAINNYA
+        _showMessage(
+          'Gagal menyimpan produk. Kode error: ${response.statusCode}',
+          isError: true,
+        );
       }
     } catch (e) {
-      _showMessage(e.toString());
+      _showMessage('Terjadi kesalahan: ${e.toString()}', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _showMessage(String message) {
+  // IMPROVED MESSAGE FUNCTION - Tambahkan parameter isError
+  void _showMessage(String message, {bool isError = false}) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF4A3749),
+        content: Row(
+          children: [
+            Icon(
+              isError ? Icons.error_outline : Icons.check_circle_outline,
+              color: Colors.white,
+              size: 22,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(message, style: const TextStyle(fontSize: 14)),
+            ),
+          ],
+        ),
+        backgroundColor: isError
+            ? const Color(0xFFD32F2F) // Merah untuk error
+            : const Color(0xFF4A3749), // Ungu untuk success
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        duration: Duration(seconds: isError ? 3 : 2),
       ),
     );
   }
