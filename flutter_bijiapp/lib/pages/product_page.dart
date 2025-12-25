@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/pages/main_page.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/components/sidebar.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/pages/cart_page.dart';
-import 'package:project_kuliah_mwsp_uts_kel4/pages/detail_page.dart';
+import '../services/api_service.dart';
+import '../config/app_config.dart';
+import 'product_form_page.dart';
+import 'login_form_page.dart';
+import 'detail_page.dart';
 
 class ProductPage extends StatefulWidget {
   final String categoryName;
 
-  const ProductPage({super.key, required this.categoryName});
+  const ProductPage({super.key, this.categoryName = 'All'});
 
   @override
   State<ProductPage> createState() => _ProductPageState();
@@ -15,53 +16,82 @@ class ProductPage extends StatefulWidget {
 
 class _ProductPageState extends State<ProductPage>
     with SingleTickerProviderStateMixin {
+  final ApiService _apiService = ApiService();
   TextEditingController searchController = TextEditingController();
   late TabController _tabController;
 
-  List<Map<String, dynamic>> allProducts = [];
-  List<Map<String, dynamic>> filteredProducts = [];
+  List<dynamic> products = [];
+  List<dynamic> filteredProducts = [];
+  bool isLoading = true;
 
-  List<String> categories = ["Beverages", "Brewed Coffee", "Blended Coffee"];
+  List<String> categories = [
+    "All",
+    "Beverages",
+    "Brewed Coffee",
+    "Blended Coffee",
+  ];
 
   @override
   void initState() {
     super.initState();
-
     _tabController = TabController(length: categories.length, vsync: this);
-
-    allProducts = [
-      {
-        'name': 'White Cream Cappuccino',
-        'price': 5.8,
-        'category': 'Coffee',
-        'image': 'assets/images/cart/pic1.jpg',
-      },
-      {
-        'name': 'Hot Cappuccino Latte with Mocha',
-        'price': 5.8,
-        'category': 'Coffee',
-        'image': 'assets/images/cart/pic2.jpg',
-      },
-      {
-        'name': 'Mocha Coffee Creamy Milky',
-        'price': 5.8,
-        'category': 'Coffee',
-        'image': 'assets/images/cart/pic3.jpg',
-      },
-      {
-        'name': 'Creamy Latte Coffee',
-        'price': 5.8,
-        'category': 'Coffee',
-        'image': 'assets/images/cart/pic4.jpg',
-      },
-    ];
-
-    filteredProducts = List.from(allProducts);
+    fetchProducts();
   }
 
+  // ================= FETCH PRODUCTS =================
+  Future<void> fetchProducts() async {
+    setState(() => isLoading = true);
+
+    try {
+      final response = await _apiService.get(
+        AppConfig.products,
+        needsAuth: true,
+      );
+
+      final data = _apiService.parseResponse(response);
+
+      if (response.statusCode == 200) {
+        setState(() {
+          products = data['data'];
+          filteredProducts = List.from(products);
+        });
+      } else if (response.statusCode == 401) {
+        _handleUnauthorized();
+      } else {
+        _showMessage('Gagal mengambil data produk');
+      }
+    } catch (e) {
+      _showMessage(e.toString());
+    } finally {
+      setState(() => isLoading = false);
+    }
+  }
+
+  // ================= DELETE PRODUCT =================
+  Future<void> deleteProduct(int id) async {
+    try {
+      final response = await _apiService.delete(
+        '${AppConfig.products}/$id',
+        needsAuth: true,
+      );
+
+      if (response.statusCode == 200) {
+        _showMessage('Produk berhasil dihapus');
+        fetchProducts();
+      } else if (response.statusCode == 401) {
+        _handleUnauthorized();
+      } else {
+        _showMessage('Gagal menghapus produk');
+      }
+    } catch (e) {
+      _showMessage(e.toString());
+    }
+  }
+
+  // ================= SEARCH PRODUCT =================
   void _searchProduct(String query) {
     setState(() {
-      filteredProducts = allProducts
+      filteredProducts = products
           .where(
             (item) => item['name'].toLowerCase().contains(query.toLowerCase()),
           )
@@ -69,10 +99,27 @@ class _ProductPageState extends State<ProductPage>
     });
   }
 
+  // ================= TOKEN EXPIRED =================
+  void _handleUnauthorized() async {
+    await _apiService.removeToken();
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (_) => false,
+    );
+  }
+
+  void _showMessage(String message) {
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      drawer: const SideBar(),
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
@@ -86,12 +133,7 @@ class _ProductPageState extends State<ProductPage>
                   InkWell(
                     borderRadius: BorderRadius.circular(50),
                     onTap: () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MainPage(),
-                        ),
-                      );
+                      Navigator.pop(context);
                     },
                     child: Container(
                       padding: const EdgeInsets.all(8),
@@ -110,23 +152,27 @@ class _ProductPageState extends State<ProductPage>
                       color: Colors.black,
                     ),
                   ),
-                  Builder(
-                    builder: (context) {
-                      return InkWell(
-                        borderRadius: BorderRadius.circular(50),
-                        onTap: () {
-                          Scaffold.of(context).openDrawer();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          child: const Icon(
-                            Icons.more_vert_rounded,
-                            color: Colors.black,
-                            size: 22,
-                          ),
+                  InkWell(
+                    borderRadius: BorderRadius.circular(50),
+                    onTap: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ProductFormPage(),
                         ),
                       );
+                      if (result == true) {
+                        fetchProducts();
+                      }
                     },
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      child: const Icon(
+                        Icons.add_circle_outline,
+                        color: Color(0xFF4A3749),
+                        size: 22,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -200,164 +246,313 @@ class _ProductPageState extends State<ProductPage>
 
             // ===== PRODUCT GRID =====
             Expanded(
-              child: TabBarView(
-                controller: _tabController,
-                children: categories.map((category) {
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: GridView.builder(
-                      itemCount: filteredProducts.length,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            childAspectRatio: 0.73,
-                            crossAxisSpacing: 16,
-                            mainAxisSpacing: 16,
-                          ),
-                      itemBuilder: (context, index) {
-                        final product = filteredProducts[index];
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredProducts.isEmpty
+                  ? const Center(child: Text('Belum ada produk'))
+                  : RefreshIndicator(
+                      onRefresh: fetchProducts,
+                      child: TabBarView(
+                        controller: _tabController,
+                        children: categories.map((category) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: GridView.builder(
+                              itemCount: filteredProducts.length,
+                              gridDelegate:
+                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    childAspectRatio: 0.73,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
+                              itemBuilder: (context, index) {
+                                final product = filteredProducts[index];
 
-                        // ==== CARD PRODUK YANG BISA DIKLIK ====
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(18),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const DetailPage(),
-                              ),
-                            );
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(18),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.08),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // ===== GAMBAR PRODUK =====
-                                Stack(
-                                  children: [
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(
-                                        top: Radius.circular(18),
+                                // ==== CARD PRODUK YANG BISA DIKLIK ====
+                                return InkWell(
+                                  borderRadius: BorderRadius.circular(18),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const DetailPage(),
                                       ),
-                                      child: Image.asset(
-                                        product['image'],
-                                        height: 120,
-                                        width: double.infinity,
-                                        fit: BoxFit.cover,
-                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.08),
+                                          blurRadius: 6,
+                                          offset: const Offset(0, 3),
+                                        ),
+                                      ],
                                     ),
-                                    // ===== IKON KERANJANG =====
-                                    Positioned(
-                                      bottom: 8,
-                                      right: 8,
-                                      child: InkWell(
-                                        borderRadius: BorderRadius.circular(50),
-                                        onTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const CartPage(),
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        // ===== GAMBAR PRODUK =====
+                                        Stack(
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                    top: Radius.circular(18),
+                                                  ),
+                                              child:
+                                                  product['image_url'] !=
+                                                          null &&
+                                                      product['image_url'] != ''
+                                                  ? Image.network(
+                                                      product['image_url'],
+                                                      height: 120,
+                                                      width: double.infinity,
+                                                      fit: BoxFit.cover,
+                                                      errorBuilder:
+                                                          (
+                                                            context,
+                                                            error,
+                                                            stackTrace,
+                                                          ) {
+                                                            return Container(
+                                                              height: 120,
+                                                              color: Colors
+                                                                  .grey[200],
+                                                              child: const Icon(
+                                                                Icons.coffee,
+                                                                size: 50,
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                            );
+                                                          },
+                                                    )
+                                                  : Container(
+                                                      height: 120,
+                                                      color: Colors.grey[200],
+                                                      child: const Icon(
+                                                        Icons.coffee,
+                                                        size: 50,
+                                                        color: Colors.grey,
+                                                      ),
+                                                    ),
                                             ),
-                                          );
-                                        },
-                                        child: Container(
-                                          width: 38,
-                                          height: 38,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle,
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black.withOpacity(
-                                                  0.15,
+                                            // ===== TOMBOL EDIT & DELETE =====
+                                            Positioned(
+                                              top: 8,
+                                              right: 8,
+                                              child: Row(
+                                                children: [
+                                                  // TOMBOL EDIT
+                                                  InkWell(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          50,
+                                                        ),
+                                                    onTap: () async {
+                                                      final result =
+                                                          await Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (_) =>
+                                                                  ProductFormPage(
+                                                                    product:
+                                                                        product,
+                                                                  ),
+                                                            ),
+                                                          );
+                                                      if (result == true) {
+                                                        fetchProducts();
+                                                      }
+                                                    },
+                                                    child: Container(
+                                                      width: 32,
+                                                      height: 32,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        shape: BoxShape.circle,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.black
+                                                                .withOpacity(
+                                                                  0.15,
+                                                                ),
+                                                            blurRadius: 6,
+                                                            offset:
+                                                                const Offset(
+                                                                  0,
+                                                                  3,
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.edit,
+                                                        color: Color(
+                                                          0xFF4A3749,
+                                                        ),
+                                                        size: 16,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 6),
+                                                  // TOMBOL DELETE
+                                                  InkWell(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          50,
+                                                        ),
+                                                    onTap: () {
+                                                      showDialog(
+                                                        context: context,
+                                                        builder: (_) => AlertDialog(
+                                                          title: const Text(
+                                                            'Hapus Produk',
+                                                          ),
+                                                          content: const Text(
+                                                            'Yakin ingin menghapus produk ini?',
+                                                          ),
+                                                          actions: [
+                                                            TextButton(
+                                                              onPressed: () =>
+                                                                  Navigator.pop(
+                                                                    context,
+                                                                  ),
+                                                              child: const Text(
+                                                                'Batal',
+                                                              ),
+                                                            ),
+                                                            TextButton(
+                                                              onPressed: () {
+                                                                Navigator.pop(
+                                                                  context,
+                                                                );
+                                                                deleteProduct(
+                                                                  product['id'],
+                                                                );
+                                                              },
+                                                              child: const Text(
+                                                                'Hapus',
+                                                                style: TextStyle(
+                                                                  color: Colors
+                                                                      .red,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    },
+                                                    child: Container(
+                                                      width: 32,
+                                                      height: 32,
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white,
+                                                        shape: BoxShape.circle,
+                                                        boxShadow: [
+                                                          BoxShadow(
+                                                            color: Colors.black
+                                                                .withOpacity(
+                                                                  0.15,
+                                                                ),
+                                                            blurRadius: 6,
+                                                            offset:
+                                                                const Offset(
+                                                                  0,
+                                                                  3,
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.delete,
+                                                        color: Colors.red,
+                                                        size: 16,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        // ===== DESKRIPSI PRODUK =====
+                                        Padding(
+                                          padding: const EdgeInsets.all(10),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                product['name'] ??
+                                                    'Nama Produk',
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
                                                 ),
-                                                blurRadius: 6,
-                                                offset: const Offset(0, 3),
+                                              ),
+                                              const SizedBox(height: 3),
+                                              Text(
+                                                product['category'] ??
+                                                    'Tanpa kategori',
+                                                style: const TextStyle(
+                                                  fontSize: 13,
+                                                  color: Colors.grey,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 6),
+                                              Row(
+                                                children: [
+                                                  const Icon(
+                                                    Icons.local_offer_outlined,
+                                                    color: Colors.black54,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 4),
+                                                  Text(
+                                                    "Rp ${double.tryParse(product['price'].toString())?.toStringAsFixed(0) ?? '0'}",
+                                                    style: const TextStyle(
+                                                      fontSize: 14,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: Color(0xFF4A3749),
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ],
                                           ),
-                                          child: const Icon(
-                                            Icons.shopping_bag_outlined,
-                                            color: Color(0xFF4A3749),
-                                            size: 20,
-                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ),
-                                  ],
-                                ),
-                                // ===== DESKRIPSI PRODUK =====
-                                Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        product['name'],
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        product['category'],
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 6),
-                                      Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.local_offer_outlined,
-                                            color: Colors.black54,
-                                            size: 16,
-                                          ),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            "\$${product['price'].toStringAsFixed(1)}",
-                                            style: const TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                              color: Color(0xFF4A3749),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
                                   ),
-                                ),
-                              ],
+                                );
+                              },
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        }).toList(),
+                      ),
                     ),
-                  );
-                }).toList(),
-              ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    searchController.dispose();
+    super.dispose();
   }
 }
