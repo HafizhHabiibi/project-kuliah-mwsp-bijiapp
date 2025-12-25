@@ -54,7 +54,6 @@ class AuthService {
         final token = data['token'];
         await _apiService.saveToken(token);
 
-        // 🔥 PENTING: backend sekarang pakai key "user"
         final user = UserModel.fromJson(data['user']);
 
         return {'success': true, 'user': user, 'token': token};
