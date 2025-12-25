@@ -12,6 +12,9 @@ class AppConfig {
   static const String logout = '/logout';
   static const String getUser = '/get-user';
 
+  // ===== EDIT PROFILE PAGE =====
+  static const updateProfile = '/user/profile';
+
   // ===== PRODUK (NANTI) =====
   static const String products = '/products';
 }
