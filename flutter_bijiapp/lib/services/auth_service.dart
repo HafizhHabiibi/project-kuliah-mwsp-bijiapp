@@ -5,7 +5,8 @@ import 'api_service.dart';
 class AuthService {
   final ApiService _apiService = ApiService();
 
-  // ================= REGISTER (AUTO LOGIN) =================
+  // ================= REGISTER =================
+  // Register lalu AUTO LOGIN
   Future<Map<String, dynamic>> register({
     required String name,
     required String email,
@@ -21,17 +22,8 @@ class AuthService {
       final data = _apiService.parseResponse(response);
 
       if (response.statusCode == 201 && data['status'] == 'success') {
-        final token = data['token'];
-        await _apiService.saveToken(token);
-
-        final user = UserModel.fromJson(data['user_info']);
-
-        return {
-          'success': true,
-          'message': data['message'] ?? 'Registration successful',
-          'user': user,
-          'token': token,
-        };
+        // 🔥 AUTO LOGIN SETELAH REGISTER
+        return await login(email: email, password: password);
       } else {
         return {
           'success': false,
@@ -39,7 +31,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': e.toString()};
     }
   }
 
@@ -73,11 +65,11 @@ class AuthService {
         return {'success': false, 'message': data['message'] ?? 'Login failed'};
       }
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': e.toString()};
     }
   }
 
-  // ================= GET USER =================
+  // ================= GET USER INFO =================
   Future<Map<String, dynamic>> getUserInfo() async {
     try {
       final response = await _apiService.get(
@@ -96,7 +88,34 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': e.toString()};
+    }
+  }
+
+  // ================= UPDATE PROFILE =================
+  Future<Map<String, dynamic>> updateProfile({
+    required String name,
+    required String email,
+  }) async {
+    try {
+      final response = await _apiService.put(
+        AppConfig.updateProfile,
+        body: {'name': name, 'email': email},
+        needsAuth: true,
+      );
+
+      final data = _apiService.parseResponse(response);
+
+      if (response.statusCode == 200) {
+        return {'success': true};
+      } else {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Update profile failed',
+        };
+      }
+    } catch (e) {
+      return {'success': false, 'message': e.toString()};
     }
   }
 
@@ -124,7 +143,7 @@ class AuthService {
         };
       }
     } catch (e) {
-      return {'success': false, 'message': 'Error: $e'};
+      return {'success': false, 'message': e.toString()};
     }
   }
 
