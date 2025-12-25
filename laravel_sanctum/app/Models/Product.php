@@ -15,5 +15,12 @@ class Product extends Model
         'description',
         'category',
         'image_url',
+        'user_id', 
     ];
+
+    // Relasi tabel users dan products
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }
