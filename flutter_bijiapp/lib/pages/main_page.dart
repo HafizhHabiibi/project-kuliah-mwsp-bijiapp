@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/components/bottom_bar.dart';
@@ -6,16 +5,11 @@ import 'package:project_kuliah_mwsp_uts_kel4/pages/detail_page.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/cart_page.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/product_page.dart';
 import 'package:project_kuliah_mwsp_uts_kel4/pages/notifications_page.dart';
+import '../services/auth_service.dart';
+import '../models/user_model.dart';
 
 class MainPage extends StatefulWidget {
-  final String? profileImagePath;
-  final String userName;
-
-  const MainPage({
-    super.key,
-    this.profileImagePath,
-    this.userName = "Kevin Hard",
-  });
+  const MainPage({super.key});
 
   @override
   State<MainPage> createState() => _MainPageState();
@@ -23,9 +17,42 @@ class MainPage extends StatefulWidget {
 
 class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
+  UserModel? _currentUser;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      final result = await AuthService().getUserInfo();
+
+      if (result['success'] == true && result['user'] != null) {
+        setState(() {
+          _currentUser = result['user'] as UserModel;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -58,7 +85,7 @@ class _MainPageState extends State<MainPage> {
                             ),
                             const SizedBox(height: 4),
                             Text(
-                              widget.userName,
+                              _currentUser?.name ?? "Guest",
                               style: const TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -313,13 +340,22 @@ class _MainPageState extends State<MainPage> {
 
   // ===== FOTO PROFIL =====
   Widget _buildProfileImage() {
-    if (widget.profileImagePath != null &&
-        widget.profileImagePath!.isNotEmpty) {
-      final file = File(widget.profileImagePath!);
-      if (file.existsSync()) {
-        return Image.file(file, height: 45, width: 45, fit: BoxFit.cover);
-      }
+    if (_currentUser?.profilePhotoUrl != null &&
+        _currentUser!.profilePhotoUrl!.isNotEmpty) {
+      return Image.network(
+        _currentUser!.profilePhotoUrl!,
+        height: 45,
+        width: 45,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) {
+          return _defaultAvatar();
+        },
+      );
     }
+    return _defaultAvatar();
+  }
+
+  Widget _defaultAvatar() {
     return Image.asset(
       'assets/images/profile/avatar1.jpg',
       height: 45,
