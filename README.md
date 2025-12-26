@@ -56,5 +56,7 @@ http://127.0.0.1:8000
 
 ## Catatan
 Pastikan MySQL sudah berjalan
+
 Database bijiapp sudah dibuat
+
 Backend harus dijalankan sebelum aplikasi Flutter
